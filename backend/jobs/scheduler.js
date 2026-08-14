@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const { runWeatherJob } = require('./weatherFetcher');
+const { runMLInference } = require('./mlRunner');
 const { processAlerts } = require('../services/alertService');
 const winston = require('winston');
 
@@ -34,7 +35,12 @@ function initScheduler() {
   });
 
   // Note: Alert processing will be triggered sequentially by the ML job completion, not by a polling cron.
-  // Note: ML inference (15 min) is NOT implemented here per Phase 10/11 constraints.
+  
+  // ML inference: Every 15 minutes
+  cron.schedule('*/15 * * * *', async () => {
+    logger.info('Cron triggered: runMLInference');
+    await runMLInference();
+  });
 
   isInitialized = true;
   logger.info('Scheduler initialized successfully');
