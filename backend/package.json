@@ -1,0 +1,20 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "AquaSentry Node.js Backend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test-startup": "node -e \"const app = require('./server'); setTimeout(async () => { if (app.server) { app.server.close(); } await require('./db').closeDatabase(); console.log('Test completed'); process.exit(0); }, 3000);\""
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "joi": "^18.2.3",
+    "mongodb": "^7.5.0",
+    "node-cron": "^4.6.0",
+    "winston": "^3.13.0"
+  }
+}
