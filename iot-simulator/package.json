@@ -1,0 +1,28 @@
+{
+  "name": "iot-simulator",
+  "version": "1.0.0",
+  "description": "IoT Water Quality Sensor Simulator for WaterGuard AI",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "iot",
+    "waterguard",
+    "esp32",
+    "simulator",
+    "water-quality"
+  ],
+  "author": "WaterGuard AI Team - Member 2",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "csv-parser": "^3.2.0",
+    "dotenv": "^16.4.7",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
