@@ -8,6 +8,7 @@ const DEFAULT_DATASET_PATH = path.join(__dirname, '../../datasets/water_potabili
 
 /**
  * Loads and validates the Water Potability CSV dataset.
+ * Extracts and maps required water quality fields (ph, Solids -> tds, Turbidity -> turbidity).
  * Filters out incomplete or invalid rows containing missing, empty, or non-numeric values.
  *
  * @param {string} [filePath] - Optional custom path to dataset CSV file.
@@ -43,23 +44,19 @@ async function loadDataset(filePath = DEFAULT_DATASET_PATH) {
 
 /**
  * Parses and strictly validates a single CSV row.
- * Returns null if any parameter is missing, empty string, or non-finite number.
+ * Maps CSV column headers to API_CONTRACT.md schema properties:
+ * - ph -> ph
+ * - Solids -> tds
+ * - Turbidity -> turbidity
  *
  * @param {Object} row - Raw row object from csv-parser.
- * @returns {Object|null} Cleaned record with camelCase numerical fields, or null if invalid.
+ * @returns {Object|null} Cleaned record with mapped numerical fields, or null if invalid.
  */
 function parseAndValidateRow(row) {
   const fields = [
     { csvKey: 'ph', targetKey: 'ph' },
-    { csvKey: 'Hardness', targetKey: 'hardness' },
-    { csvKey: 'Solids', targetKey: 'solids' },
-    { csvKey: 'Chloramines', targetKey: 'chloramines' },
-    { csvKey: 'Sulfate', targetKey: 'sulfate' },
-    { csvKey: 'Conductivity', targetKey: 'conductivity' },
-    { csvKey: 'Organic_carbon', targetKey: 'organicCarbon' },
-    { csvKey: 'Trihalomethanes', targetKey: 'trihalomethanes' },
-    { csvKey: 'Turbidity', targetKey: 'turbidity' },
-    { csvKey: 'Potability', targetKey: 'potability' }
+    { csvKey: 'Solids', targetKey: 'tds' },
+    { csvKey: 'Turbidity', targetKey: 'turbidity' }
   ];
 
   const cleaned = {};

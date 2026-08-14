@@ -2,20 +2,13 @@
 
 /**
  * Reusable constants for the IoT Water Quality Sensor Simulator.
- * Reserved for sensor feature definitions, default ranges, and protocol constants.
- * No business logic is implemented here in Phase 1.
+ * Aligned strictly with API_CONTRACT.md and PROJECT_ARCHITECTURE.md.
  */
 const SENSOR_PARAMETERS = Object.freeze({
   PH: 'ph',
-  HARDNESS: 'Hardness',
-  SOLIDS: 'Solids',
-  CHLORAMINES: 'Chloramines',
-  SULFATE: 'Sulfate',
-  CONDUCTIVITY: 'Conductivity',
-  ORGANIC_CARBON: 'Organic_carbon',
-  TRIHALOMETHANES: 'Trihalomethanes',
-  TURBIDITY: 'Turbidity',
-  POTABILITY: 'Potability'
+  TDS: 'tds',
+  TURBIDITY: 'turbidity',
+  TEMPERATURE: 'temperature'
 });
 
 const DEFAULT_SIMULATOR_SETTINGS = Object.freeze({

@@ -19,7 +19,7 @@ async function streamTick() {
       const reading = generateReading(node);
       statistics.recordGenerated();
 
-      logger.info(`[${node.nodeId}] Generated Sensor Reading (pH: ${reading.ph.toFixed(2)}, Turbidity: ${reading.turbidity.toFixed(2)}, Solids: ${reading.solids.toFixed(1)})`);
+      logger.info(`[${node.nodeId}] Generated Sensor Reading (pH: ${reading.ph.toFixed(2)}, TDS: ${reading.tds.toFixed(1)} ppm, Turbidity: ${reading.turbidity.toFixed(2)} NTU, Temp: ${reading.temperature.toFixed(1)}°C)`);
       logger.debug(`[${node.nodeId}] Full Telemetry Payload: ${JSON.stringify(reading)}`);
 
       const result = await sendTelemetry(reading);

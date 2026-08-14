@@ -19,9 +19,13 @@ function initializeSimulator(loadedDataset) {
 
 /**
  * Generates a single simulated sensor reading payload for a specified node configuration.
+ * Compliant strictly with API_CONTRACT.md Section 6 (POST /api/sensor).
+ *
+ * Returns exactly 8 parameters:
+ * { nodeId, timestamp, latitude, longitude, ph, tds, turbidity, temperature }
  *
  * @param {Object} [nodeConfig] - Optional specific node object { nodeId, latitude, longitude }.
- * @returns {Object} Simulated ESP32 telemetry reading object.
+ * @returns {Object} Simulated ESP32 telemetry reading object matching API_CONTRACT.md.
  */
 function generateReading(nodeConfig) {
   if (dataset.length === 0) {
@@ -35,21 +39,19 @@ function generateReading(nodeConfig) {
   const latitude = nodeConfig && nodeConfig.latitude !== undefined ? nodeConfig.latitude : config.latitude;
   const longitude = nodeConfig && nodeConfig.longitude !== undefined ? nodeConfig.longitude : config.longitude;
 
+  // Simulate DS18B20 waterproof sensor temperature reading (°C) as per PROJECT_ARCHITECTURE.md Section 6
+  // Plausible water temperature range: 24.0°C to 29.5°C
+  const simulatedTemp = Number((24.0 + ((record.ph * 7 + record.turbidity * 3) % 5.5)).toFixed(1));
+
   return {
     nodeId,
     timestamp: new Date().toISOString(),
-    ph: record.ph,
-    hardness: record.hardness,
-    solids: record.solids,
-    chloramines: record.chloramines,
-    sulfate: record.sulfate,
-    conductivity: record.conductivity,
-    organicCarbon: record.organicCarbon,
-    trihalomethanes: record.trihalomethanes,
-    turbidity: record.turbidity,
-    potability: record.potability,
     latitude,
-    longitude
+    longitude,
+    ph: record.ph,
+    tds: record.tds,
+    turbidity: record.turbidity,
+    temperature: simulatedTemp
   };
 }
 
