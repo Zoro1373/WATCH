@@ -1,8 +1,9 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const winston = require('winston');
-const { connectToDatabase } = require('../db');
+const { getDb } = require('../db');
 const { processAlerts } = require('../services/alertService');
+const { Double } = require('mongodb');
 
 const logger = winston.createLogger({
   level: 'info',
@@ -19,26 +20,36 @@ async function runMLInference() {
   logger.info('Starting ML Inference pipeline run');
   let db;
   try {
-    db = await connectToDatabase();
+    db = getDb();
   } catch (error) {
-    logger.error('Failed to connect to database in mlRunner', { error: error.message });
+    logger.error('Database not connected in mlRunner — server must connect first', { error: error.message });
     return;
   }
 
   try {
-    // 1. Gather Data for active locations
-    // We assume any node in sensorNodes is an active location.
-    const nodes = await db.collection('sensorNodes').find({}).toArray();
-    if (nodes.length === 0) {
-      logger.info('No sensor nodes registered. Skipping ML inference.');
+    // 1. Gather Data for actively monitored water sources
+    const waterSources = await db.collection('waterSources')
+      .find({ monitoringStatus: "MONITORED_SIMULATED" })
+      .toArray();
+
+    if (waterSources.length === 0) {
+      logger.info('No monitored water sources found. Skipping ML inference.');
       return;
     }
 
     const mlInputPayload = [];
+    const sourceMetadataMap = [];
     const timestamp = new Date().toISOString();
 
-    for (const node of nodes) {
-      // Get the latest water reading for this node (within last hour per AI_ML_SPEC.md or just latest)
+    for (const source of waterSources) {
+      // a. Resolve mapped sensor node
+      const node = await db.collection('sensorNodes').findOne({ waterSourceId: source.sourceId });
+      if (!node) {
+        logger.info(`No sensor node mapped to water source ${source.sourceId}. Skipping.`);
+        continue;
+      }
+
+      // b. Get latest telemetry for this sensor node
       const latestWater = await db.collection('waterReadings')
         .find({ nodeId: node.nodeId })
         .sort({ timestamp: -1 })
@@ -46,27 +57,58 @@ async function runMLInference() {
         .toArray();
 
       if (latestWater.length === 0) {
-        continue; // No data to infer on
+        logger.info(`No telemetry found for node ${node.nodeId} (source: ${source.sourceId}). Skipping.`);
+        continue;
       }
       const waterDoc = latestWater[0];
-      const locationCoords = waterDoc.location.coordinates; // [longitude, latitude]
-      
-      const latestSymptom = await db.collection('symptoms')
-        .find({ "location.coordinates": locationCoords })
-        .sort({ timestamp: -1 })
-        .limit(1)
+
+      // c. Resolve linked villages and aggregate community symptoms
+      const linkedVillages = await db.collection('villages')
+        .find({ primaryWaterSourceId: source.sourceId })
         .toArray();
 
+      let totalFever = 0;
+      let totalDiarrhea = 0;
+      let totalVomiting = 0;
+      let totalPain = 0;
+      let hasSymptoms = false;
+
+      for (const vil of linkedVillages) {
+        const latestSymptom = await db.collection('symptoms')
+          .find({ villageId: vil.villageId })
+          .sort({ timestamp: -1 })
+          .limit(1)
+          .toArray();
+
+        if (latestSymptom.length > 0) {
+          hasSymptoms = true;
+          totalFever += latestSymptom[0].feverCount;
+          totalDiarrhea += latestSymptom[0].diarrheaCount;
+          totalVomiting += latestSymptom[0].vomitingCount;
+          totalPain += latestSymptom[0].abdominalPainCount;
+        }
+      }
+
+      // d. Retrieve regional weather for the water source reach
+      const radiusInRadians = 50 / 6378.1;
       const latestWeather = await db.collection('weather')
-        .find({ "location.coordinates": locationCoords })
+        .find({
+          location: {
+            $geoWithin: {
+              $centerSphere: [source.location.coordinates, radiusInRadians]
+            }
+          }
+        })
         .sort({ timestamp: -1 })
         .limit(1)
         .toArray();
 
+      // e. Construct the 11-feature observation payload for ML
       const payloadObj = {
+        waterSourceId: source.sourceId,
         location: {
-          latitude: locationCoords[1], // lat is index 1
-          longitude: locationCoords[0] // lon is index 0
+          latitude: source.location.coordinates[1],
+          longitude: source.location.coordinates[0]
         },
         timestamp: timestamp,
         water: {
@@ -75,11 +117,11 @@ async function runMLInference() {
           turbidity: waterDoc.turbidity,
           temperature: waterDoc.temperature
         },
-        symptoms: latestSymptom.length > 0 ? {
-          feverCount: latestSymptom[0].feverCount,
-          diarrheaCount: latestSymptom[0].diarrheaCount,
-          vomitingCount: latestSymptom[0].vomitingCount,
-          abdominalPainCount: latestSymptom[0].abdominalPainCount
+        symptoms: hasSymptoms ? {
+          feverCount: totalFever,
+          diarrheaCount: totalDiarrhea,
+          vomitingCount: totalVomiting,
+          abdominalPainCount: totalPain
         } : {
           feverCount: null,
           diarrheaCount: null,
@@ -96,25 +138,28 @@ async function runMLInference() {
           humidity: null
         }
       };
-      
+
       mlInputPayload.push(payloadObj);
+      sourceMetadataMap.push({
+        waterSourceId: source.sourceId,
+        location: source.location
+      });
     }
 
     if (mlInputPayload.length === 0) {
-      logger.info('No water reading data found for any locations. Skipping ML inference.');
+      logger.info('No valid telemetry found for any monitored water sources. Skipping ML inference.');
       return;
     }
 
-    // 2. Spawn Python ML Process
+    // 2. Spawn Python ML Process (Frozen Isolation Forest Pipeline)
     const projectRoot = path.join(__dirname, '..', '..');
+    const pythonBin = process.env.PYTHON_BIN || 'python';
     const pythonArgs = ['-m', 'ml'];
-    
-    // Setup environment for the child process to inherit process.env (like MODEL_ARTIFACT_PATH if set)
     const pythonEnv = { ...process.env, PYTHONPATH: projectRoot };
 
-    logger.info(`Spawning Python process: python ${pythonArgs.join(' ')}`);
+    logger.info(`Spawning Python process: ${pythonBin} ${pythonArgs.join(' ')}`);
 
-    const pythonProcess = spawn('python', pythonArgs, {
+    const pythonProcess = spawn(pythonBin, pythonArgs, {
       cwd: projectRoot,
       env: pythonEnv,
       stdio: ['pipe', 'pipe', 'pipe']
@@ -131,7 +176,7 @@ async function runMLInference() {
       stderrData += data.toString();
     });
 
-    // Write input JSON to stdin and close it
+    // Write input JSON to stdin and close
     pythonProcess.stdin.write(JSON.stringify(mlInputPayload));
     pythonProcess.stdin.end();
 
@@ -145,10 +190,10 @@ async function runMLInference() {
     }
 
     if (stderrData.trim()) {
-      logger.warn('Python ML process generated diagnostics/warnings', { stderr: stderrData });
+      logger.warn('Python ML process diagnostics/warnings', { stderr: stderrData });
     }
 
-    // 3. Parse and Persist Output
+    // 3. Parse and Persist Output into riskScores
     let mlResults;
     try {
       mlResults = JSON.parse(stdoutData);
@@ -158,21 +203,23 @@ async function runMLInference() {
     }
 
     if (!Array.isArray(mlResults)) {
-      mlResults = [mlResults]; // ensure it's an array for batch processing
+      mlResults = [mlResults];
     }
 
     let insertedCount = 0;
-    const { Double } = require('mongodb');
 
-    for (const result of mlResults) {
-      // Validate structure to avoid DB errors
+    for (let i = 0; i < mlResults.length; i++) {
+      const result = mlResults[i];
+      const meta = sourceMetadataMap[i] || {};
+      const waterSourceId = result.waterSourceId || meta.waterSourceId;
+
       if (typeof result.riskScore !== 'number' || !result.riskLevel) {
         logger.error('Malformed ML output skipped', { result });
         continue;
       }
 
-      // Convert standard JSON response to Mongo GeoJSON format as per schema
       const doc = {
+        waterSourceId: waterSourceId,
         location: {
           type: "Point",
           coordinates: [new Double(result.location.longitude), new Double(result.location.latitude)]
@@ -183,7 +230,7 @@ async function runMLInference() {
         riskScore: new Double(result.riskScore),
         riskLevel: result.riskLevel
       };
-      
+
       if (result.modelVersion) doc.modelVersion = result.modelVersion;
       if (result.contributingFactors) doc.contributingFactors = result.contributingFactors;
 

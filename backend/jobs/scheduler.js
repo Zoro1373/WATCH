@@ -1,7 +1,6 @@
 const cron = require('node-cron');
 const { runWeatherJob } = require('./weatherFetcher');
 const { runMLInference } = require('./mlRunner');
-const { processAlerts } = require('../services/alertService');
 const winston = require('winston');
 
 const logger = winston.createLogger({

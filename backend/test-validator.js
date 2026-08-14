@@ -60,15 +60,21 @@ const server = app.listen(0, async () => {
     });
 
     await runTest("7. Valid symptom payload", "/api/symptom", "POST", {
-      location: { latitude: 8.1833, longitude: 77.4119 },
+      villageId: "VIL_MAJ_001",
+      location: { latitude: 26.9466, longitude: 94.1658 },
       timestamp: "2026-08-12T12:00:00Z",
       feverCount: 12, diarrheaCount: 5, vomitingCount: 3, abdominalPainCount: 4
     });
 
-    await runTest("8. Invalid symptom counts (-5)", "/api/symptom", "POST", {
-      location: { latitude: 8.1833, longitude: 77.4119 },
+    await runTest("8a. Invalid symptom counts (-5)", "/api/symptom", "POST", {
+      villageId: "VIL_MAJ_001",
       timestamp: "2026-08-12T12:00:00Z",
       feverCount: 12, diarrheaCount: -5, vomitingCount: 3, abdominalPainCount: 4
+    });
+
+    await runTest("8b. Missing required villageId", "/api/symptom", "POST", {
+      timestamp: "2026-08-12T12:00:00Z",
+      feverCount: 12, diarrheaCount: 5, vomitingCount: 3, abdominalPainCount: 4
     });
 
     await runTest("9a. Invalid URL location parameter (lat too high)", "/api/risk/95.0,77.4119", "GET");

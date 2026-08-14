@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "axios": "^1.7.2",
     "canvas-confetti": "^1.9.3",
     "leaflet": "^1.9.4",

@@ -13,52 +13,249 @@ const client = axios.create({
 });
 
 /**
- * Pre-configured monitored sensor node locations with regional identifiers.
+ * Approved Assam Monitored Water Sources (v1.1 MVP Dataset).
  */
-export const MONITORED_NODES = [
+export const ASSAM_WATER_SOURCES = [
   {
-    nodeId: 'NODE001',
-    name: 'Perur Lake Basin',
-    region: 'Coimbatore South',
-    latitude: 11.0168,
-    longitude: 76.9558,
+    sourceId: 'SRC_001',
+    name: 'Brahmaputra River (Majuli Reach)',
+    type: 'RIVER',
+    district: 'Majuli',
+    latitude: 26.9380,
+    longitude: 94.1620,
+    location: { type: 'Point', coordinates: [94.1620, 26.9380] },
+    servedVillageIds: ['VIL_MAJ_001', 'VIL_MAJ_002'],
+    sensorNodeId: 'NODE001',
     defaultRisk: 'HIGH',
-    defaultScore: 0.76,
-    defaultWater: { ph: 6.4, tds: 540, turbidity: 9.8, temperature: 29.4 },
-    defaultSymptoms: { feverCount: 14, diarrheaCount: 8, vomitingCount: 5, abdominalPainCount: 6 },
-    defaultWeather: { temperature: 28.5, precipitation: 14.2, humidity: 86 },
-    contributingFactors: { turbidity: 0.35, feverCount: 0.28, precipitation: 0.21, ph: 0.16 }
+    defaultScore: 0.78,
+    defaultWater: { ph: 6.4, tds: 520, turbidity: 9.8, temperature: 29.4 },
+    defaultSymptoms: { feverCount: 15, diarrheaCount: 8, vomitingCount: 3, abdominalPainCount: 3 },
+    defaultWeather: { temperature: 28.5, precipitation: 14.2, humidity: 86 }
   },
   {
-    nodeId: 'NODE002',
-    name: 'Singanallur Reservoir',
-    region: 'Coimbatore East',
-    latitude: 11.0215,
-    longitude: 76.9621,
+    sourceId: 'SRC_002',
+    name: 'Deepor Beel',
+    type: 'WETLAND',
+    district: 'Kamrup Metro',
+    latitude: 26.1333,
+    longitude: 91.6667,
+    location: { type: 'Point', coordinates: [91.6667, 26.1333] },
+    servedVillageIds: ['VIL_KAM_001', 'VIL_KAM_002', 'VIL_KAM_003'],
+    sensorNodeId: 'NODE002',
     defaultRisk: 'MEDIUM',
     defaultScore: 0.48,
     defaultWater: { ph: 7.1, tds: 380, turbidity: 4.2, temperature: 27.8 },
     defaultSymptoms: { feverCount: 4, diarrheaCount: 2, vomitingCount: 1, abdominalPainCount: 2 },
-    defaultWeather: { temperature: 27.2, precipitation: 2.1, humidity: 74 },
-    contributingFactors: { tds: 0.22, temperature: 0.18, humidity: 0.15 }
+    defaultWeather: { temperature: 27.2, precipitation: 2.1, humidity: 74 }
   },
   {
-    nodeId: 'NODE003',
-    name: 'Ukkadam Wetland Catchment',
-    region: 'Coimbatore Central',
-    latitude: 11.0093,
-    longitude: 76.9510,
+    sourceId: 'SRC_003',
+    name: 'Barak River (Cachar Reach)',
+    type: 'RIVER',
+    district: 'Cachar',
+    latitude: 24.8260,
+    longitude: 92.7980,
+    location: { type: 'Point', coordinates: [92.7980, 24.8260] },
+    servedVillageIds: ['VIL_CAC_001', 'VIL_CAC_002'],
+    sensorNodeId: 'NODE003',
     defaultRisk: 'LOW',
-    defaultScore: 0.19,
-    defaultWater: { ph: 7.4, tds: 210, turbidity: 1.8, temperature: 26.5 },
+    defaultScore: 0.22,
+    defaultWater: { ph: 7.5, tds: 180, turbidity: 1.5, temperature: 24.5 },
     defaultSymptoms: { feverCount: 1, diarrheaCount: 0, vomitingCount: 0, abdominalPainCount: 1 },
-    defaultWeather: { temperature: 26.8, precipitation: 0.0, humidity: 62 },
-    contributingFactors: { ph: 0.08, temperature: 0.05 }
+    defaultWeather: { temperature: 26.8, precipitation: 0.0, humidity: 62 }
   }
 ];
 
 /**
- * Fetch latest risk assessment for a coordinate pair (lat,lon).
+ * Approved Assam Villages (v1.1 MVP Dataset).
+ */
+export const ASSAM_VILLAGES = [
+  {
+    villageId: 'VIL_MAJ_001',
+    name: 'Kamalabari',
+    district: 'Majuli',
+    latitude: 26.9466,
+    longitude: 94.1658,
+    location: { type: 'Point', coordinates: [94.1658, 26.9466] },
+    primaryWaterSourceId: 'SRC_001',
+    verificationStatus: 'VERIFIED_GEOGRAPHY_PROTOTYPE_LINK'
+  },
+  {
+    villageId: 'VIL_MAJ_002',
+    name: 'Garmur',
+    district: 'Majuli',
+    latitude: 26.9803,
+    longitude: 94.1575,
+    location: { type: 'Point', coordinates: [94.1575, 26.9803] },
+    primaryWaterSourceId: 'SRC_001',
+    verificationStatus: 'VERIFIED_GEOGRAPHY_PROTOTYPE_LINK'
+  },
+  {
+    villageId: 'VIL_KAM_001',
+    name: 'Pamohi',
+    district: 'Kamrup Metro',
+    latitude: 26.1039,
+    longitude: 91.6894,
+    location: { type: 'Point', coordinates: [91.6894, 26.1039] },
+    primaryWaterSourceId: 'SRC_002',
+    verificationStatus: 'VERIFIED_GEOGRAPHY_PROTOTYPE_LINK'
+  },
+  {
+    villageId: 'VIL_KAM_002',
+    name: 'Chakardeo',
+    district: 'Kamrup Metro',
+    latitude: 26.1000,
+    longitude: 91.6483,
+    location: { type: 'Point', coordinates: [91.6483, 26.1000] },
+    primaryWaterSourceId: 'SRC_002',
+    verificationStatus: 'VERIFIED_GEOGRAPHY_PROTOTYPE_LINK'
+  },
+  {
+    villageId: 'VIL_KAM_003',
+    name: 'Paschim Boragaon',
+    district: 'Kamrup Metro',
+    latitude: 26.1164,
+    longitude: 91.6833,
+    location: { type: 'Point', coordinates: [91.6833, 26.1164] },
+    primaryWaterSourceId: 'SRC_002',
+    verificationStatus: 'VERIFIED_GEOGRAPHY_PROTOTYPE_LINK'
+  },
+  {
+    villageId: 'VIL_CAC_001',
+    name: 'Sonabarighat',
+    district: 'Cachar',
+    latitude: 24.7454,
+    longitude: 92.8475,
+    location: { type: 'Point', coordinates: [92.8475, 24.7454] },
+    primaryWaterSourceId: 'SRC_003',
+    verificationStatus: 'VERIFIED_GEOGRAPHY_PROTOTYPE_LINK'
+  },
+  {
+    villageId: 'VIL_CAC_002',
+    name: 'Borkhola',
+    district: 'Cachar',
+    latitude: 24.9228,
+    longitude: 92.7458,
+    location: { type: 'Point', coordinates: [92.7458, 24.9228] },
+    primaryWaterSourceId: 'SRC_003',
+    verificationStatus: 'VERIFIED_GEOGRAPHY_PROTOTYPE_LINK'
+  }
+];
+
+// Backward-compatible alias for existing components
+export const MONITORED_NODES = ASSAM_WATER_SOURCES;
+
+/**
+ * Fetch all registered water sources from backend.
+ */
+export async function fetchWaterSources() {
+  try {
+    const res = await client.get('/water-sources');
+    if (res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+      // Map coordinates to latitude / longitude for Leaflet
+      return res.data.data.map(ws => ({
+        ...ws,
+        latitude: ws.location?.coordinates ? ws.location.coordinates[1] : ws.latitude,
+        longitude: ws.location?.coordinates ? ws.location.coordinates[0] : ws.longitude
+      }));
+    }
+  } catch (err) {
+    console.warn('Failed to fetch water sources from backend, using verified defaults:', err.message);
+  }
+  return ASSAM_WATER_SOURCES;
+}
+
+/**
+ * Fetch single water source by sourceId.
+ */
+export async function fetchWaterSourceById(sourceId) {
+  try {
+    const res = await client.get(`/water-sources/${sourceId}`);
+    if (res.data && res.data.success && res.data.data) {
+      const ws = res.data.data;
+      return {
+        ...ws,
+        latitude: ws.location?.coordinates ? ws.location.coordinates[1] : ws.latitude,
+        longitude: ws.location?.coordinates ? ws.location.coordinates[0] : ws.longitude
+      };
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch water source '${sourceId}', using fallback:`, err.message);
+  }
+  return ASSAM_WATER_SOURCES.find(s => s.sourceId === sourceId) || null;
+}
+
+/**
+ * Fetch all registered villages from backend.
+ */
+export async function fetchVillages() {
+  try {
+    const res = await client.get('/villages');
+    if (res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+      return res.data.data.map(v => ({
+        ...v,
+        latitude: v.location?.coordinates ? v.location.coordinates[1] : v.latitude,
+        longitude: v.location?.coordinates ? v.location.coordinates[0] : v.longitude
+      }));
+    }
+  } catch (err) {
+    console.warn('Failed to fetch villages from backend, using verified defaults:', err.message);
+  }
+  return ASSAM_VILLAGES;
+}
+
+/**
+ * Fetch single village by villageId.
+ */
+export async function fetchVillageById(villageId) {
+  try {
+    const res = await client.get(`/villages/${villageId}`);
+    if (res.data && res.data.success && res.data.data) {
+      const v = res.data.data;
+      return {
+        ...v,
+        latitude: v.location?.coordinates ? v.location.coordinates[1] : v.latitude,
+        longitude: v.location?.coordinates ? v.location.coordinates[0] : v.longitude
+      };
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch village '${villageId}', using fallback:`, err.message);
+  }
+  return ASSAM_VILLAGES.find(v => v.villageId === villageId) || null;
+}
+
+/**
+ * Fetch latest risk assessment for a monitored water source.
+ */
+export async function fetchWaterSourceRisk(sourceId) {
+  try {
+    const res = await client.get(`/risk/source/${sourceId}`);
+    if (res.data && res.data.success && res.data.data) {
+      return { data: res.data.data, isLive: true };
+    }
+  } catch (err) {
+    // 404 means no risk evaluated yet
+    if (err.response && err.response.status === 404) {
+      return { data: null, isLive: true, unavailable: true };
+    }
+    console.warn(`Error fetching risk for water source '${sourceId}':`, err.message);
+  }
+
+  const fallback = ASSAM_WATER_SOURCES.find(s => s.sourceId === sourceId);
+  return {
+    data: fallback ? {
+      waterSourceId: fallback.sourceId,
+      riskScore: fallback.defaultScore,
+      riskLevel: fallback.defaultRisk,
+      timestamp: new Date().toISOString(),
+      location: { latitude: fallback.latitude, longitude: fallback.longitude }
+    } : null,
+    isLive: false
+  };
+}
+
+/**
+ * Legacy: Fetch latest risk assessment for a coordinate pair (lat,lon).
  */
 export async function fetchLocationRisk(lat, lon) {
   const locStr = `${Number(lat).toFixed(4)},${Number(lon).toFixed(4)}`;
@@ -68,21 +265,20 @@ export async function fetchLocationRisk(lat, lon) {
       return { data: res.data.data, isLive: true };
     }
   } catch (err) {
-    // Graceful fallback to static demo node representation
+    // Graceful fallback
   }
 
-  // Fallback matching closest node
-  const match = MONITORED_NODES.find(n => 
-    Math.abs(n.latitude - lat) < 0.05 && Math.abs(n.longitude - lon) < 0.05
-  ) || MONITORED_NODES[0];
+  const match = ASSAM_WATER_SOURCES.find(n => 
+    Math.abs(n.latitude - lat) < 0.2 && Math.abs(n.longitude - lon) < 0.2
+  ) || ASSAM_WATER_SOURCES[0];
 
   return {
     data: {
+      waterSourceId: match.sourceId,
       location: { latitude: lat, longitude: lon },
       riskScore: match.defaultScore,
       riskLevel: match.defaultRisk,
-      timestamp: new Date().toISOString(),
-      contributingFactors: match.contributingFactors
+      timestamp: new Date().toISOString()
     },
     isLive: false
   };
@@ -102,9 +298,9 @@ export async function fetchLocationWeather(lat, lon) {
     // Fallback
   }
 
-  const match = MONITORED_NODES.find(n => 
-    Math.abs(n.latitude - lat) < 0.05 && Math.abs(n.longitude - lon) < 0.05
-  ) || MONITORED_NODES[0];
+  const match = ASSAM_WATER_SOURCES.find(n => 
+    Math.abs(n.latitude - lat) < 0.2 && Math.abs(n.longitude - lon) < 0.2
+  ) || ASSAM_WATER_SOURCES[0];
 
   return {
     data: {
@@ -137,6 +333,7 @@ export async function submitSymptomReport(payload) {
       message: "Symptom report accepted (Local Demo Mode)",
       data: {
         symptomId: "demo_" + Math.random().toString(36).substring(2, 9),
+        villageId: payload.villageId,
         timestamp: payload.timestamp
       }
     };
@@ -148,7 +345,9 @@ export async function submitSymptomReport(payload) {
  */
 export async function checkBackendHealth() {
   try {
-    const res = await axios.get('/health', { timeout: 2500 });
+    // Use baseURL from API_BASE_URL, strip /api suffix and hit /health directly
+    const healthUrl = API_BASE_URL.replace(/\/api$/, '') + '/health';
+    const res = await axios.get(healthUrl, { timeout: 2500 });
     return res.data && res.data.status === 'ok';
   } catch {
     return false;

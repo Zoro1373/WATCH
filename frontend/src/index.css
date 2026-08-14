@@ -296,6 +296,15 @@ code, pre, .font-mono {
   animation: pulseGlow 2.5s ease-in-out infinite;
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
 .radar-ping {
   position: absolute;
   width: 100%;

@@ -12,11 +12,12 @@ const sensorSchema = Joi.object({
 });
 
 const symptomSchema = Joi.object({
+  villageId: Joi.string().min(1).required(),
   location: Joi.object({
     latitude: Joi.number().min(-90).max(90).required(),
     longitude: Joi.number().min(-180).max(180).required()
-  }).required(),
-  timestamp: Joi.date().iso().required(),
+  }).optional(),
+  timestamp: Joi.date().iso().optional(),
   feverCount: Joi.number().integer().min(0).required(),
   diarrheaCount: Joi.number().integer().min(0).required(),
   vomitingCount: Joi.number().integer().min(0).required(),

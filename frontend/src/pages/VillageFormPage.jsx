@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { submitSymptomReport } from '../services/api';
 import confetti from 'canvas-confetti';
-import { HeartHandshake, MapPin, Send, CheckCircle2, AlertCircle, Plus, Minus, Lock, RefreshCw, Sparkles } from 'lucide-react';
+import { HeartHandshake, MapPin, Send, CheckCircle2, AlertCircle, Plus, Minus, Home, Sparkles } from 'lucide-react';
 
 export function VillageFormPage() {
-  const { nodesList, addCommunityReport } = useApp();
+  const { villagesList, waterSourcesList, addCommunityReport, setActiveTab } = useApp();
 
-  const [selectedNodeId, setSelectedNodeId] = useState(nodesList[0]?.nodeId || 'NODE001');
-  const [latitude, setLatitude] = useState(nodesList[0]?.latitude || 11.0168);
-  const [longitude, setLongitude] = useState(nodesList[0]?.longitude || 76.9558);
+  const [selectedVillageId, setSelectedVillageId] = useState(villagesList[0]?.villageId || 'VIL_MAJ_001');
 
   const [feverCount, setFeverCount] = useState(0);
   const [diarrheaCount, setDiarrheaCount] = useState(0);
@@ -20,30 +18,16 @@ export function VillageFormPage() {
   const [successMessage, setSuccessMessage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
 
-  // Handle Preset node selection
-  const handleNodeChange = (nodeId) => {
-    setSelectedNodeId(nodeId);
-    const found = nodesList.find(n => n.nodeId === nodeId);
-    if (found) {
-      setLatitude(found.latitude);
-      setLongitude(found.longitude);
-    }
-  };
+  const currentVillage = villagesList.find(v => v.villageId === selectedVillageId) || villagesList[0];
+  const parentWaterSource = currentVillage && waterSourcesList.find(s => s.sourceId === currentVillage.primaryWaterSourceId);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSuccessMessage(null);
     setErrorMessage(null);
 
-    // Validation
-    const latNum = parseFloat(latitude);
-    const lonNum = parseFloat(longitude);
-    if (isNaN(latNum) || latNum < -90 || latNum > 90) {
-      setErrorMessage('Please enter a valid Latitude between -90 and 90.');
-      return;
-    }
-    if (isNaN(lonNum) || lonNum < -180 || lonNum > 180) {
-      setErrorMessage('Please enter a valid Longitude between -180 and 180.');
+    if (!selectedVillageId) {
+      setErrorMessage('Please select a registered Assam village settlement.');
       return;
     }
 
@@ -56,10 +40,7 @@ export function VillageFormPage() {
     setIsSubmitting(true);
 
     const payload = {
-      location: {
-        latitude: latNum,
-        longitude: lonNum
-      },
+      villageId: selectedVillageId,
       timestamp: new Date().toISOString(),
       feverCount: parseInt(feverCount, 10),
       diarrheaCount: parseInt(diarrheaCount, 10),
@@ -70,9 +51,9 @@ export function VillageFormPage() {
     try {
       const res = await submitSymptomReport(payload);
       setIsSubmitting(false);
-      setSuccessMessage('Community report submitted successfully. Data has been queued for the next 15-minute ML risk inference cycle.');
-      
-      // Trigger festive celebratory confetti
+      setSuccessMessage(`✅ Report for ${currentVillage?.name || selectedVillageId} submitted successfully! Data attributed to ${parentWaterSource?.name || currentVillage?.primaryWaterSourceId} and queued for ML inference. Redirecting you to the dashboard in 2.5 seconds...`);
+
+      // Trigger celebratory confetti
       confetti({
         particleCount: 80,
         spread: 70,
@@ -87,9 +68,14 @@ export function VillageFormPage() {
       setDiarrheaCount(0);
       setVomitingCount(0);
       setAbdominalPainCount(0);
+
+      // Navigate to dashboard after 2.5 seconds so user sees their data
+      setTimeout(() => {
+        setActiveTab('dashboard');
+      }, 2500);
     } catch (err) {
       setIsSubmitting(false);
-      const msg = err.error?.message || 'Failed to submit report. Please verify connection and try again.';
+      const msg = err.error?.message || err.message || 'Failed to submit report. Please verify connection and try again.';
       setErrorMessage(msg);
     }
   };
@@ -100,13 +86,13 @@ export function VillageFormPage() {
       {/* Page Header */}
       <div style={{ textAlign: 'center', marginBottom: '36px' }}>
         <div className="glass-pill" style={{ color: '#10B981', borderColor: 'rgba(16, 185, 129, 0.3)', marginBottom: '14px' }}>
-          <HeartHandshake size={14} /> PUBLIC HEALTH COMMUNITY REPORT
+          <HeartHandshake size={14} /> PUBLIC HEALTH COMMUNITY INTAKE
         </div>
         <h1 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 800, marginBottom: '10px' }}>
           Community Health Report
         </h1>
         <p style={{ color: '#94A3B8', fontSize: '15px', maxWidth: '620px', margin: '0 auto' }}>
-          Help WaterGuard AI understand emerging symptom patterns in your area to detect potential water contamination before an outbreak spreads.
+          Submit community-level symptom observations for registered Assam settlements to enable early anomaly detection and waterborne epidemic prevention.
         </p>
       </div>
 
@@ -129,13 +115,10 @@ export function VillageFormPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            marginBottom: '24px'
+            marginBottom: '28px'
           }}>
-            <CheckCircle2 size={20} style={{ flexShrink: 0 }} />
-            <div>
-              <strong style={{ display: 'block', color: '#F8FAFC' }}>Community Report Accepted</strong>
-              <span>{successMessage}</span>
-            </div>
+            <CheckCircle2 size={20} color="#10B981" />
+            <div>{successMessage}</div>
           </div>
         )}
 
@@ -151,216 +134,203 @@ export function VillageFormPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
-            marginBottom: '24px'
+            marginBottom: '28px'
           }}>
-            <AlertCircle size={20} style={{ flexShrink: 0 }} />
-            <div>
-              <strong style={{ display: 'block', color: '#F8FAFC' }}>Submission Error</strong>
-              <span>{errorMessage}</span>
-            </div>
+            <AlertCircle size={20} color="#EF4444" />
+            <div>{errorMessage}</div>
           </div>
         )}
 
-        {/* Section 1: Geographic Location Selection */}
+        {/* 1. Village Selection Section */}
         <div style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#F8FAFC', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MapPin size={18} color="#00E5FF" />
-            <span>1. Monitored Village / Basin Location</span>
-          </h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Home size={18} color="#10B981" />
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#F8FAFC' }}>
+              1. Select Registered Assam Village / Settlement
+            </h3>
+          </div>
 
-          {/* Quick Preset Buttons */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
-            {nodesList.map(node => {
-              const isSelected = selectedNodeId === node.nodeId;
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px' }}>
+            {villagesList.map(vil => {
+              const isSelected = selectedVillageId === vil.villageId;
+              const source = waterSourcesList.find(s => s.sourceId === vil.primaryWaterSourceId);
+
               return (
-                <button
-                  type="button"
-                  key={node.nodeId}
-                  onClick={() => handleNodeChange(node.nodeId)}
+                <div
+                  key={vil.villageId}
+                  onClick={() => setSelectedVillageId(vil.villageId)}
                   style={{
-                    padding: '8px 16px',
-                    borderRadius: 'var(--radius-full)',
+                    padding: '14px 16px',
+                    borderRadius: '12px',
                     border: '1px solid',
-                    borderColor: isSelected ? '#00E5FF' : 'rgba(255, 255, 255, 0.1)',
-                    background: isSelected ? 'rgba(0, 229, 255, 0.15)' : 'rgba(15, 23, 42, 0.6)',
-                    color: isSelected ? '#00E5FF' : '#CBD5E1',
-                    fontSize: '13px',
-                    fontWeight: isSelected ? 700 : 500,
+                    borderColor: isSelected ? '#10B981' : 'rgba(255, 255, 255, 0.08)',
+                    background: isSelected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(15, 23, 42, 0.6)',
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease'
+                    transition: 'all 0.2s ease',
+                    boxShadow: isSelected ? '0 0 16px rgba(16, 185, 129, 0.25)' : 'none'
                   }}
                 >
-                  📍 {node.name} ({node.nodeId})
-                </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '14px', color: isSelected ? '#A7F3D0' : '#F8FAFC' }}>
+                      🏡 {vil.name}
+                    </strong>
+                    <span style={{ fontSize: '10px', color: '#64748B', fontFamily: 'var(--font-mono)' }}>
+                      {vil.villageId}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '4px' }}>
+                    <strong>District:</strong> {vil.district}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#00E5FF' }}>
+                    Associated: {source ? source.name : vil.primaryWaterSourceId}
+                  </div>
+                </div>
               );
             })}
           </div>
 
-          {/* Lat / Lon Inputs */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', color: '#94A3B8', marginBottom: '6px', fontWeight: 600 }}>
-                Latitude (-90 to 90)
-              </label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(7, 11, 20, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '10px',
-                  padding: '12px 16px',
-                  color: '#F8FAFC',
-                  fontSize: '14px',
-                  fontFamily: 'var(--font-mono)',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', color: '#94A3B8', marginBottom: '6px', fontWeight: 600 }}>
-                Longitude (-180 to 180)
-              </label>
-              <input
-                type="number"
-                step="any"
-                required
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                style={{
-                  width: '100%',
-                  background: 'rgba(7, 11, 20, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: '10px',
-                  padding: '12px 16px',
-                  color: '#F8FAFC',
-                  fontSize: '14px',
-                  fontFamily: 'var(--font-mono)',
-                  outline: 'none'
-                }}
-              />
-            </div>
+          <div style={{
+            fontSize: '11px',
+            color: '#64748B',
+            background: 'rgba(255, 255, 255, 0.03)',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            marginTop: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            Authoritative attribution flow: <strong>Symptom Report</strong> → <strong>villageId</strong> → <strong>primaryWaterSourceId</strong> → <strong>ML Anomaly Risk Evaluation</strong>. Zero coordinate guessing used.
           </div>
         </div>
 
-        {/* Section 2: Aggregated Symptom Tallies */}
+        {/* 2. Symptom Counters Section */}
         <div style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#F8FAFC', marginBottom: '8px' }}>
-            2. Observed Symptom Counts (Aggregated Group Tally)
-          </h3>
-          <p style={{ fontSize: '12px', color: '#64748B', marginBottom: '16px' }}>
-            Enter the number of individuals observed with symptoms in the reporting window.
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Sparkles size={18} color="#00E5FF" />
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#F8FAFC' }}>
+              2. Observed Community Symptom Counts (Past 24 Hours)
+            </h3>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
             
-            {/* Fever Counter */}
-            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#F8FAFC', display: 'block' }}>Fever</strong>
-                <span style={{ fontSize: '11px', color: '#94A3B8' }}>High body temperature</span>
+            {/* Fever */}
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#F8FAFC' }}>Fever Cases</span>
+                <span style={{ fontSize: '11px', color: '#F87171', fontWeight: 700 }}>Thermal Indicator</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <button
                   type="button"
                   onClick={() => setFeverCount(Math.max(0, feverCount - 1))}
-                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#CBD5E1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Minus size={16} />
                 </button>
-                <span style={{ minWidth: '32px', textAlign: 'center', fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#F87171' }}>
-                  {feverCount}
-                </span>
+                <input
+                  type="number"
+                  min="0"
+                  value={feverCount}
+                  onChange={(e) => setFeverCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '70px', textAlign: 'center', fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#F8FAFC', padding: '6px' }}
+                />
                 <button
                   type="button"
                   onClick={() => setFeverCount(feverCount + 1)}
-                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(248, 113, 113, 0.2)', border: '1px solid rgba(248, 113, 113, 0.4)', color: '#F87171', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Plus size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Diarrhea Counter */}
-            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#F8FAFC', display: 'block' }}>Diarrhea</strong>
-                <span style={{ fontSize: '11px', color: '#94A3B8' }}>Watery loose stools</span>
+            {/* Diarrhea */}
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#F8FAFC' }}>Diarrhea Cases</span>
+                <span style={{ fontSize: '11px', color: '#FBBF24', fontWeight: 700 }}>GI Signal</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <button
                   type="button"
                   onClick={() => setDiarrheaCount(Math.max(0, diarrheaCount - 1))}
-                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#CBD5E1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Minus size={16} />
                 </button>
-                <span style={{ minWidth: '32px', textAlign: 'center', fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#FBBF24' }}>
-                  {diarrheaCount}
-                </span>
+                <input
+                  type="number"
+                  min="0"
+                  value={diarrheaCount}
+                  onChange={(e) => setDiarrheaCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '70px', textAlign: 'center', fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#F8FAFC', padding: '6px' }}
+                />
                 <button
                   type="button"
                   onClick={() => setDiarrheaCount(diarrheaCount + 1)}
-                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(245, 158, 11, 0.2)', border: '1px solid rgba(245, 158, 11, 0.4)', color: '#FBBF24', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Plus size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Vomiting Counter */}
-            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#F8FAFC', display: 'block' }}>Vomiting</strong>
-                <span style={{ fontSize: '11px', color: '#94A3B8' }}>Nausea & vomiting</span>
+            {/* Vomiting */}
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#F8FAFC' }}>Vomiting Cases</span>
+                <span style={{ fontSize: '11px', color: '#38BDF8', fontWeight: 700 }}>Acute Distress</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <button
                   type="button"
                   onClick={() => setVomitingCount(Math.max(0, vomitingCount - 1))}
-                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#CBD5E1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Minus size={16} />
                 </button>
-                <span style={{ minWidth: '32px', textAlign: 'center', fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#38BDF8' }}>
-                  {vomitingCount}
-                </span>
+                <input
+                  type="number"
+                  min="0"
+                  value={vomitingCount}
+                  onChange={(e) => setVomitingCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '70px', textAlign: 'center', fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#F8FAFC', padding: '6px' }}
+                />
                 <button
                   type="button"
                   onClick={() => setVomitingCount(vomitingCount + 1)}
-                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(56, 189, 248, 0.2)', border: '1px solid rgba(56, 189, 248, 0.4)', color: '#38BDF8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Plus size={16} />
                 </button>
               </div>
             </div>
 
-            {/* Abdominal Pain Counter */}
-            <div style={{ background: 'rgba(15, 23, 42, 0.7)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#F8FAFC', display: 'block' }}>Abdominal Pain</strong>
-                <span style={{ fontSize: '11px', color: '#94A3B8' }}>Cramping & spasms</span>
+            {/* Abdominal Pain */}
+            <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#F8FAFC' }}>Abdominal Pain Cases</span>
+                <span style={{ fontSize: '11px', color: '#A855F7', fontWeight: 700 }}>Enteric Cramping</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <button
                   type="button"
                   onClick={() => setAbdominalPainCount(Math.max(0, abdominalPainCount - 1))}
-                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#CBD5E1', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Minus size={16} />
                 </button>
-                <span style={{ minWidth: '32px', textAlign: 'center', fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#A855F7' }}>
-                  {abdominalPainCount}
-                </span>
+                <input
+                  type="number"
+                  min="0"
+                  value={abdominalPainCount}
+                  onChange={(e) => setAbdominalPainCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  style={{ width: '70px', textAlign: 'center', fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-mono)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#F8FAFC', padding: '6px' }}
+                />
                 <button
                   type="button"
                   onClick={() => setAbdominalPainCount(abdominalPainCount + 1)}
-                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.2)', border: '1px solid rgba(168, 85, 247, 0.4)', color: '#A855F7', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(255,255,255,0.06)', border: 'none', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                 >
                   <Plus size={16} />
                 </button>
@@ -368,51 +338,38 @@ export function VillageFormPage() {
             </div>
 
           </div>
-        </div>
-
-        {/* Privacy Assurance Banner */}
-        <div style={{
-          background: 'rgba(15, 23, 42, 0.5)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '12px',
-          padding: '14px 18px',
-          marginBottom: '28px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          fontSize: '12px',
-          color: '#94A3B8'
-        }}>
-          <Lock size={16} color="#10B981" style={{ flexShrink: 0 }} />
-          <span>
-            <strong>Data Privacy Guaranteed:</strong> Submissions strictly contain numerical aggregates. No patient names, telephone numbers, or medical diagnoses are ever stored or processed.
-          </span>
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
           disabled={isSubmitting}
-          className="btn-primary"
           style={{
             width: '100%',
-            padding: '16px',
-            fontSize: '16px',
-            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-            boxShadow: '0 0 25px rgba(16, 185, 129, 0.35)',
-            opacity: isSubmitting ? 0.7 : 1,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer'
+            padding: '14px',
+            borderRadius: '12px',
+            background: isSubmitting
+              ? 'rgba(16, 185, 129, 0.4)'
+              : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            color: '#070B14',
+            border: 'none',
+            fontSize: '15px',
+            fontWeight: 800,
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '10px',
+            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.35)',
+            transition: 'all 0.2s ease'
           }}
         >
           {isSubmitting ? (
-            <>
-              <RefreshCw size={18} className="animate-spin" />
-              <span>Transmitting Community Report to Node.js Ingestion API...</span>
-            </>
+            <span>Transmitting Report...</span>
           ) : (
             <>
               <Send size={18} />
-              <span>Submit Community Health Report</span>
+              <span>Submit Community Symptom Intake</span>
             </>
           )}
         </button>

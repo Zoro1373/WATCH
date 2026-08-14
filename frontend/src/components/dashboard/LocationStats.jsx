@@ -1,17 +1,23 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
-import { MapPin, ShieldCheck, AlertTriangle, AlertOctagon, RefreshCw, Radio } from 'lucide-react';
+import { MapPin, ShieldCheck, Droplet, Home, Radio } from 'lucide-react';
 
 export function LocationStats() {
-  const { nodesList, selectedNode, selectNodeById, lastHeartbeat } = useApp();
+  const {
+    waterSourcesList,
+    villagesList,
+    selectedWaterSource,
+    selectWaterSourceById,
+    activeRiskData
+  } = useApp();
 
-  const highCount = nodesList.filter(n => n.defaultRisk === 'HIGH').length;
-  const mediumCount = nodesList.filter(n => n.defaultRisk === 'MEDIUM').length;
-  const lowCount = nodesList.filter(n => n.defaultRisk === 'LOW').length;
+  const highCount = waterSourcesList.filter(s => s.defaultRisk === 'HIGH').length;
+  const mediumCount = waterSourcesList.filter(s => s.defaultRisk === 'MEDIUM').length;
+  const lowCount = waterSourcesList.filter(s => s.defaultRisk === 'LOW').length;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '24px' }}>
-      {/* Top Banner with Title and Node Picker */}
+      {/* Top Banner with Title and Water Source Selector */}
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
@@ -22,27 +28,31 @@ export function LocationStats() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
             <h1 style={{ fontSize: 'clamp(22px, 3vw, 30px)', fontWeight: 800 }}>
-              GIS Command Center
+              Assam GIS Command Center
             </h1>
             <span className="glass-pill" style={{ fontSize: '11px', color: '#00E5FF', borderColor: 'rgba(0, 229, 255, 0.3)' }}>
-              <Radio size={12} className="animate-pulse-glow" /> LIVE TELEMETRY
+              <Radio size={12} className="animate-pulse-glow" /> LIVE SURVEILLANCE
             </span>
           </div>
           <p style={{ color: '#94A3B8', fontSize: '13px' }}>
-            Real-time geospatial water surveillance & early-warning anomaly scoring across community reservoirs.
+            Real-time geospatial water quality surveillance and early-warning anomaly scoring across Assam river basins & wetlands.
           </p>
         </div>
 
-        {/* Quick Node Selector Pills */}
+        {/* Quick Water Source Selector Pills */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Active Basin:</span>
-          {nodesList.map(node => {
-            const isSelected = selectedNode?.nodeId === node.nodeId;
-            const badgeColor = node.defaultRisk === 'HIGH' ? '#EF4444' : node.defaultRisk === 'MEDIUM' ? '#F59E0B' : '#10B981';
+          <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 600 }}>Active Water Body:</span>
+          {waterSourcesList.map(source => {
+            const isSelected = selectedWaterSource?.sourceId === source.sourceId;
+            const currentRiskLevel = isSelected && activeRiskData?.riskLevel
+              ? activeRiskData.riskLevel
+              : source.defaultRisk || 'LOW';
+            const badgeColor = currentRiskLevel === 'HIGH' ? '#EF4444' : currentRiskLevel === 'MEDIUM' ? '#F59E0B' : '#10B981';
+
             return (
               <button
-                key={node.nodeId}
-                onClick={() => selectNodeById(node.nodeId)}
+                key={source.sourceId}
+                onClick={() => selectWaterSourceById(source.sourceId)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -61,8 +71,8 @@ export function LocationStats() {
                 }}
               >
                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: badgeColor, boxShadow: `0 0 6px ${badgeColor}` }} />
-                <span>{node.name}</span>
-                <span style={{ color: '#64748B', fontFamily: 'var(--font-mono)' }}>({node.nodeId})</span>
+                <span>{source.name}</span>
+                <span style={{ color: '#64748B', fontFamily: 'var(--font-mono)' }}>({source.sourceId})</span>
               </button>
             );
           })}
@@ -75,55 +85,55 @@ export function LocationStats() {
         gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
         gap: '16px'
       }}>
-        {/* Total Locations */}
+        {/* Monitored Water Bodies */}
         <div className="glass-panel" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(0, 229, 255, 0.1)', color: '#00E5FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <MapPin size={22} />
+            <Droplet size={22} />
           </div>
           <div>
             <div style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-heading)', color: '#F8FAFC' }}>
-              {nodesList.length}
+              {waterSourcesList.length}
             </div>
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Total Monitored Basins</div>
+            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Monitored Water Bodies</div>
           </div>
         </div>
 
-        {/* Low Risk */}
+        {/* Registered Villages */}
         <div className="glass-panel" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <ShieldCheck size={22} />
+            <Home size={22} />
           </div>
           <div>
             <div style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-heading)', color: '#34D399' }}>
-              {lowCount}
+              {villagesList.length}
             </div>
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Low Risk (Stable)</div>
+            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Assam Catchment Villages</div>
           </div>
         </div>
 
-        {/* Medium Risk */}
-        <div className="glass-panel" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <AlertTriangle size={22} />
-          </div>
-          <div>
-            <div style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-heading)', color: '#FBBF24' }}>
-              {mediumCount}
-            </div>
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Medium Risk (Watch)</div>
-          </div>
-        </div>
-
-        {/* High Risk */}
+        {/* Elevated Risk Bodies */}
         <div className="glass-panel" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <AlertOctagon size={22} />
+            <ShieldCheck size={22} />
           </div>
           <div>
             <div style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-heading)', color: '#F87171' }}>
               {highCount}
             </div>
-            <div style={{ fontSize: '12px', color: '#94A3B8' }}>High Risk (Action)</div>
+            <div style={{ fontSize: '12px', color: '#94A3B8' }}>High Risk (Advisory)</div>
+          </div>
+        </div>
+
+        {/* Active Telemetry Nodes */}
+        <div className="glass-panel" style={{ padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(56, 189, 248, 0.1)', color: '#38BDF8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <MapPin size={22} />
+          </div>
+          <div>
+            <div style={{ fontSize: '24px', fontWeight: 800, fontFamily: 'var(--font-heading)', color: '#38BDF8' }}>
+              3 / 3
+            </div>
+            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Simulated Sensor Nodes</div>
           </div>
         </div>
       </div>

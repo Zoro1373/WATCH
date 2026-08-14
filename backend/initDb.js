@@ -6,13 +6,75 @@ async function initDb() {
     const db = await connectToDatabase();
     console.log('Connected to MongoDB Atlas.');
 
-    // 1. sensorNodes
+    // 1. villages
+    const villagesSchema = {
+      $jsonSchema: {
+        bsonType: "object",
+        required: ["villageId", "name", "district", "location", "primaryWaterSourceId", "verificationStatus", "createdAt"],
+        properties: {
+          villageId: { bsonType: "string", minLength: 1 },
+          name: { bsonType: "string" },
+          district: { bsonType: "string" },
+          location: {
+            bsonType: "object",
+            required: ["type", "coordinates"],
+            properties: {
+              type: { enum: ["Point"] },
+              coordinates: {
+                bsonType: "array",
+                minItems: 2,
+                maxItems: 2,
+                items: { bsonType: "double" }
+              }
+            }
+          },
+          primaryWaterSourceId: { bsonType: "string", minLength: 1 },
+          verificationStatus: { bsonType: "string" },
+          createdAt: { bsonType: "date" }
+        }
+      }
+    };
+
+    // 2. waterSources
+    const waterSourcesSchema = {
+      $jsonSchema: {
+        bsonType: "object",
+        required: ["sourceId", "name", "type", "location", "servedVillageIds", "monitoringStatus", "createdAt"],
+        properties: {
+          sourceId: { bsonType: "string", minLength: 1 },
+          name: { bsonType: "string" },
+          type: { enum: ["RIVER", "WETLAND", "STREAM", "GROUNDWATER"] },
+          location: {
+            bsonType: "object",
+            required: ["type", "coordinates"],
+            properties: {
+              type: { enum: ["Point"] },
+              coordinates: {
+                bsonType: "array",
+                minItems: 2,
+                maxItems: 2,
+                items: { bsonType: "double" }
+              }
+            }
+          },
+          servedVillageIds: {
+            bsonType: "array",
+            items: { bsonType: "string" }
+          },
+          monitoringStatus: { enum: ["MONITORED_SIMULATED", "MONITORED_PHYSICAL", "UNMONITORED"] },
+          createdAt: { bsonType: "date" }
+        }
+      }
+    };
+
+    // 3. sensorNodes
     const sensorNodesSchema = {
       $jsonSchema: {
         bsonType: "object",
         required: ["nodeId", "createdAt"],
         properties: {
           nodeId: { bsonType: "string", minLength: 1 },
+          waterSourceId: { bsonType: "string", minLength: 1 },
           name: { bsonType: "string" },
           location: {
             bsonType: "object",
@@ -28,13 +90,14 @@ async function initDb() {
             }
           },
           status: { bsonType: "string" },
+          isSimulated: { bsonType: "bool" },
           createdAt: { bsonType: "date" },
           lastSeenAt: { bsonType: "date" }
         }
       }
     };
 
-    // 2. waterReadings
+    // 4. waterReadings
     const waterReadingsSchema = {
       $jsonSchema: {
         bsonType: "object",
@@ -60,12 +123,13 @@ async function initDb() {
       }
     };
 
-    // 3. symptoms
+    // 5. symptoms
     const symptomsSchema = {
       $jsonSchema: {
         bsonType: "object",
-        required: ["location", "latitude", "longitude", "timestamp", "feverCount", "diarrheaCount", "vomitingCount", "abdominalPainCount"],
+        required: ["villageId", "location", "latitude", "longitude", "timestamp", "feverCount", "diarrheaCount", "vomitingCount", "abdominalPainCount"],
         properties: {
+          villageId: { bsonType: "string", minLength: 1 },
           location: {
             bsonType: "object",
             required: ["type", "coordinates"],
@@ -85,7 +149,7 @@ async function initDb() {
       }
     };
 
-    // 4. weather
+    // 6. weather
     const weatherSchema = {
       $jsonSchema: {
         bsonType: "object",
@@ -111,12 +175,13 @@ async function initDb() {
       }
     };
 
-    // 5. riskScores
+    // 7. riskScores
     const riskScoresSchema = {
       $jsonSchema: {
         bsonType: "object",
         required: ["location", "latitude", "longitude", "timestamp", "riskScore", "riskLevel"],
         properties: {
+          waterSourceId: { bsonType: "string", minLength: 1 },
           location: {
             bsonType: "object",
             required: ["type", "coordinates"],
@@ -136,7 +201,7 @@ async function initDb() {
       }
     };
 
-    // 6. alerts
+    // 8. alerts
     const alertsSchema = {
       $jsonSchema: {
         bsonType: "object",
@@ -166,6 +231,8 @@ async function initDb() {
     };
 
     const collectionsSetup = [
+      { name: "villages", validator: villagesSchema },
+      { name: "waterSources", validator: waterSourcesSchema },
       { name: "sensorNodes", validator: sensorNodesSchema },
       { name: "waterReadings", validator: waterReadingsSchema },
       { name: "symptoms", validator: symptomsSchema },
@@ -190,8 +257,20 @@ async function initDb() {
 
     // CREATE INDEXES
     console.log("Creating indexes...");
+    const villagesColl = db.collection("villages");
+    await villagesColl.createIndex({ villageId: 1 }, { unique: true });
+    await villagesColl.createIndex({ primaryWaterSourceId: 1 });
+    await villagesColl.createIndex({ location: "2dsphere" });
+    console.log("Indexes created for villages");
+
+    const waterSourcesColl = db.collection("waterSources");
+    await waterSourcesColl.createIndex({ sourceId: 1 }, { unique: true });
+    await waterSourcesColl.createIndex({ location: "2dsphere" });
+    console.log("Indexes created for waterSources");
+
     const sensorNodesColl = db.collection("sensorNodes");
     await sensorNodesColl.createIndex({ nodeId: 1 }, { unique: true });
+    await sensorNodesColl.createIndex({ waterSourceId: 1 });
     console.log("Indexes created for sensorNodes");
 
     const waterReadingsColl = db.collection("waterReadings");
@@ -201,6 +280,7 @@ async function initDb() {
     console.log("Indexes created for waterReadings");
 
     const symptomsColl = db.collection("symptoms");
+    await symptomsColl.createIndex({ villageId: 1, timestamp: -1 });
     await symptomsColl.createIndex({ location: "2dsphere", timestamp: -1 });
     console.log("Indexes created for symptoms");
 
@@ -209,6 +289,7 @@ async function initDb() {
     console.log("Indexes created for weather");
 
     const riskScoresColl = db.collection("riskScores");
+    await riskScoresColl.createIndex({ waterSourceId: 1, timestamp: -1 });
     await riskScoresColl.createIndex({ location: "2dsphere", timestamp: -1 });
     console.log("Indexes created for riskScores");
 

@@ -5,3 +5,9 @@ __pycache__/
 venv/
 env/
 *.pkl
+node_modules/
+dist/
+*.log
+.env
+.env.*
+!.env.example

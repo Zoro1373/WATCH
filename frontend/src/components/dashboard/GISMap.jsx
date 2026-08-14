@@ -1,25 +1,26 @@
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { useApp } from '../../context/AppContext';
 import { RiskBadge } from '../common/Badge';
-import { Maximize2, Layers, MapPin, Eye } from 'lucide-react';
+import { Layers, Droplet, Home, ShieldCheck, Info } from 'lucide-react';
 
-// Custom Map Controller to smoothly pan when active node changes
+// Custom Map Controller to smoothly pan when active entity changes
 function MapViewController({ center, zoom }) {
   const map = useMap();
   useEffect(() => {
     if (center && map) {
-      map.flyTo(center, zoom || 14, { duration: 1.2 });
+      map.flyTo(center, zoom || 11, { duration: 1.2 });
     }
   }, [center, zoom, map]);
   return null;
 }
 
-// Generate Custom Leaflet pulsing HTML icons for each risk tier
-function createRiskMarkerIcon(level, score, isSelected) {
+// Generate Custom Leaflet HTML icons for Water Sources
+function createWaterSourceMarkerIcon(level, isSelected) {
   const color = level === 'HIGH' ? '#EF4444' : level === 'MEDIUM' ? '#F59E0B' : '#10B981';
-  const size = isSelected ? 42 : 34;
+  const size = isSelected ? 44 : 36;
 
   const html = `
     <div style="
@@ -42,26 +43,68 @@ function createRiskMarkerIcon(level, score, isSelected) {
       "></div>
       <div style="
         position: relative;
-        width: ${isSelected ? '22px' : '18px'};
-        height: ${isSelected ? '22px' : '18px'};
+        width: ${isSelected ? '24px' : '20px'};
+        height: ${isSelected ? '24px' : '20px'};
         border-radius: 50%;
-        background-color: ${color};
+        background: radial-gradient(circle at 30% 30%, #38BDF8 0%, ${color} 80%);
         border: 2px solid #FFFFFF;
         box-shadow: 0 0 16px ${color};
         display: flex;
         align-items: center;
         justify-content: center;
         color: #070B14;
-        font-size: 9px;
-        font-weight: 800;
-        font-family: var(--font-mono);
+        font-size: 11px;
       ">
+        💧
       </div>
     </div>
   `;
 
   return L.divIcon({
-    className: 'custom-leaflet-marker',
+    className: 'custom-water-source-marker',
+    html: html,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2]
+  });
+}
+
+// Generate Custom Leaflet HTML icons for Villages
+function createVillageMarkerIcon(isLinked, isSelected) {
+  const color = isSelected ? '#00E5FF' : isLinked ? '#10B981' : '#64748B';
+  const size = isSelected ? 32 : isLinked ? 26 : 22;
+
+  const html = `
+    <div style="
+      position: relative;
+      width: ${size}px;
+      height: ${size}px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    ">
+      <div style="
+        width: 100%;
+        height: 100%;
+        border-radius: 6px;
+        background-color: ${color};
+        border: 1.5px solid #FFFFFF;
+        box-shadow: 0 0 10px ${color}80;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #070B14;
+        font-size: ${isSelected ? '13px' : '10px'};
+        transform: rotate(45deg);
+      ">
+        <span style="transform: rotate(-45deg);">🏡</span>
+      </div>
+    </div>
+  `;
+
+  return L.divIcon({
+    className: 'custom-village-marker',
     html: html,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
@@ -70,11 +113,24 @@ function createRiskMarkerIcon(level, score, isSelected) {
 }
 
 export function GISMap() {
-  const { nodesList, selectedNode, setSelectedNode } = useApp();
+  const {
+    waterSourcesList,
+    villagesList,
+    selectedWaterSource,
+    setSelectedWaterSource,
+    selectedVillage,
+    setSelectedVillage,
+    activeRiskData
+  } = useApp();
 
-  const currentCenter = selectedNode 
-    ? [selectedNode.latitude, selectedNode.longitude] 
-    : [11.0168, 76.9558];
+  // Initial Assam Overview center
+  const assamCenter = [26.1500, 92.9000];
+
+  const currentCenter = selectedWaterSource
+    ? [selectedWaterSource.latitude, selectedWaterSource.longitude]
+    : assamCenter;
+
+  const currentZoom = selectedWaterSource ? 12 : 7;
 
   return (
     <div className="glass-panel" style={{
@@ -101,7 +157,7 @@ export function GISMap() {
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)'
         }}>
           <Layers size={14} color="#00E5FF" />
-          <span>GIS Surveillance Layer • OpenStreetMap Tiles</span>
+          <span>Assam GIS Surveillance Layer • OpenStreetMap</span>
         </div>
       </div>
 
@@ -121,25 +177,29 @@ export function GISMap() {
         gap: '6px',
         fontSize: '11px'
       }}>
-        <span style={{ fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Risk Levels</span>
+        <span style={{ fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Legend</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EF4444', boxShadow: '0 0 6px #EF4444' }} />
-          <span style={{ color: '#F87171' }}>High (Score ≥ 0.70)</span>
+          <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#00E5FF' }} />
+          <span style={{ color: '#E2E8F0' }}>💧 Monitored Water Source</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F59E0B', boxShadow: '0 0 6px #F59E0B' }} />
-          <span style={{ color: '#FBBF24' }}>Medium (0.40 – 0.69)</span>
+          <span style={{ width: '8px', height: '8px', borderRadius: '2px', background: '#10B981', transform: 'rotate(45deg)' }} />
+          <span style={{ color: '#A7F3D0' }}>🏡 Linked Village Settlement</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 6px #10B981' }} />
-          <span style={{ color: '#34D399' }}>Low (&lt; 0.40)</span>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: '4px', paddingTop: '4px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <span style={{ fontSize: '10px', color: '#64748B' }}>Water Source Risk Tiers:</span>
+          <div style={{ display: 'flex', gap: '6px', fontSize: '10px' }}>
+            <span style={{ color: '#F87171' }}>● High</span>
+            <span style={{ color: '#FBBF24' }}>● Med</span>
+            <span style={{ color: '#34D399' }}>● Low</span>
+          </div>
         </div>
       </div>
 
       {/* Leaflet Map React Container */}
       <MapContainer
         center={currentCenter}
-        zoom={14}
+        zoom={currentZoom}
         scrollWheelZoom={false}
         style={{ width: '100%', height: '100%' }}
       >
@@ -148,42 +208,66 @@ export function GISMap() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        <MapViewController center={currentCenter} zoom={14} />
+        <MapViewController center={currentCenter} zoom={currentZoom} />
 
-        {nodesList.map((node) => {
-          const isSelected = selectedNode?.nodeId === node.nodeId;
-          const markerIcon = createRiskMarkerIcon(node.defaultRisk, node.defaultScore, isSelected);
+        {/* 1. Render Water Sources Layer */}
+        {waterSourcesList.map((source) => {
+          const isSelected = selectedWaterSource?.sourceId === source.sourceId;
+          const currentRiskLevel = isSelected && activeRiskData?.riskLevel
+            ? activeRiskData.riskLevel
+            : source.defaultRisk || 'LOW';
+
+          const markerIcon = createWaterSourceMarkerIcon(currentRiskLevel, isSelected);
 
           return (
             <Marker
-              key={node.nodeId}
-              position={[node.latitude, node.longitude]}
+              key={source.sourceId}
+              position={[source.latitude, source.longitude]}
               icon={markerIcon}
               eventHandlers={{
                 click: () => {
-                  setSelectedNode(node);
+                  setSelectedWaterSource(source);
+                  setSelectedVillage(null);
                 }
               }}
             >
               <Popup>
-                <div style={{ padding: '6px 2px', minWidth: '190px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <strong style={{ fontSize: '14px', color: '#F8FAFC' }}>{node.name}</strong>
-                    <span style={{ fontSize: '11px', color: '#64748B', fontFamily: 'var(--font-mono)' }}>{node.nodeId}</span>
+                <div style={{ padding: '6px 2px', minWidth: '220px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <strong style={{ fontSize: '14px', color: '#F8FAFC' }}>{source.name}</strong>
+                    <span style={{ fontSize: '11px', color: '#00E5FF', fontFamily: 'var(--font-mono)' }}>{source.sourceId}</span>
                   </div>
 
-                  <div style={{ marginBottom: '10px' }}>
-                    <RiskBadge level={node.defaultRisk} score={node.defaultScore} size="sm" />
+                  <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <RiskBadge
+                      level={currentRiskLevel}
+                      score={isSelected && activeRiskData?.riskScore !== undefined ? activeRiskData.riskScore : source.defaultScore}
+                      size="sm"
+                    />
+                    <span style={{ fontSize: '10px', color: '#94A3B8', textTransform: 'uppercase' }}>{source.type}</span>
                   </div>
 
-                  <div style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '10px' }}>
-                    <div><strong>Region:</strong> {node.region}</div>
-                    <div><strong>Coordinates:</strong> {node.latitude}, {node.longitude}</div>
-                    <div><strong>Turbidity:</strong> {node.defaultWater.turbidity} NTU</div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '8px' }}>
+                    <div><strong>District:</strong> {source.district || 'Assam'}</div>
+                    <div><strong>Coordinates:</strong> {source.latitude.toFixed(4)}, {source.longitude.toFixed(4)}</div>
+                    <div><strong>Monitoring:</strong> <span style={{ color: '#38BDF8' }}>{source.monitoringStatus}</span></div>
+                    <div><strong>Linked Villages:</strong> {source.servedVillageIds ? source.servedVillageIds.join(', ') : 'None'}</div>
+                  </div>
+
+                  <div style={{
+                    fontSize: '9.5px',
+                    color: '#64748B',
+                    background: 'rgba(255,255,255,0.04)',
+                    padding: '4px 6px',
+                    borderRadius: '4px',
+                    marginBottom: '10px',
+                    border: '1px solid rgba(255,255,255,0.06)'
+                  }}>
+                    Prototype Association • Monitoring Reach
                   </div>
 
                   <button
-                    onClick={() => setSelectedNode(node)}
+                    onClick={() => setSelectedWaterSource(source)}
                     style={{
                       width: '100%',
                       padding: '6px',
@@ -196,7 +280,79 @@ export function GISMap() {
                       cursor: 'pointer'
                     }}
                   >
-                    Inspect Telemetry
+                    Inspect Water Body Telemetry
+                  </button>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+
+        {/* 2. Render Villages Layer */}
+        {villagesList.map((village) => {
+          const isLinked = selectedWaterSource?.sourceId === village.primaryWaterSourceId;
+          const isSelected = selectedVillage?.villageId === village.villageId;
+          const markerIcon = createVillageMarkerIcon(isLinked, isSelected);
+
+          const parentSource = waterSourcesList.find(s => s.sourceId === village.primaryWaterSourceId);
+
+          return (
+            <Marker
+              key={village.villageId}
+              position={[village.latitude, village.longitude]}
+              icon={markerIcon}
+              eventHandlers={{
+                click: () => {
+                  setSelectedVillage(village);
+                  if (parentSource) {
+                    setSelectedWaterSource(parentSource);
+                  }
+                }
+              }}
+            >
+              <Popup>
+                <div style={{ padding: '6px 2px', minWidth: '210px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <strong style={{ fontSize: '13px', color: '#F8FAFC' }}>🏡 {village.name}</strong>
+                    <span style={{ fontSize: '10px', color: '#10B981', fontFamily: 'var(--font-mono)' }}>{village.villageId}</span>
+                  </div>
+
+                  <div style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', flexDirection: 'column', gap: '3px', marginBottom: '8px' }}>
+                    <div><strong>District:</strong> {village.district}</div>
+                    <div><strong>Coordinates:</strong> {village.latitude.toFixed(4)}, {village.longitude.toFixed(4)}</div>
+                    <div><strong>Associated Source:</strong> <span style={{ color: '#00E5FF' }}>{parentSource ? parentSource.name : village.primaryWaterSourceId}</span></div>
+                  </div>
+
+                  <div style={{
+                    fontSize: '9.5px',
+                    color: '#64748B',
+                    background: 'rgba(255,255,255,0.04)',
+                    padding: '4px 6px',
+                    borderRadius: '4px',
+                    marginBottom: '8px',
+                    border: '1px solid rgba(255,255,255,0.06)'
+                  }}>
+                    Prototype Association • Monitoring Reach
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSelectedVillage(village);
+                      if (parentSource) setSelectedWaterSource(parentSource);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '5px',
+                      borderRadius: '6px',
+                      background: 'rgba(16, 185, 129, 0.2)',
+                      color: '#34D399',
+                      border: '1px solid rgba(52, 211, 153, 0.4)',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    View Associated Catchment
                   </button>
                 </div>
               </Popup>

@@ -7,18 +7,18 @@
 const nodes = Object.freeze([
   Object.freeze({
     nodeId: 'NODE001',
-    latitude: 11.0168,
-    longitude: 76.9558
+    latitude: 26.9380,
+    longitude: 94.1620
   }),
   Object.freeze({
     nodeId: 'NODE002',
-    latitude: 11.0215,
-    longitude: 76.9621
+    latitude: 26.1333,
+    longitude: 91.6667
   }),
   Object.freeze({
     nodeId: 'NODE003',
-    latitude: 11.0093,
-    longitude: 76.9510
+    latitude: 24.8260,
+    longitude: 92.7980
   })
 ]);
 

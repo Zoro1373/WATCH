@@ -1,0 +1,14 @@
+{
+  "name": "aquasentry-watch",
+  "version": "1.1.0",
+  "description": "AquaSentry (WaterGuard AI) - Assam Water Contamination & Epidemic Early-Warning System",
+  "scripts": {
+    "start:backend": "npm --prefix backend start",
+    "start:frontend": "npm --prefix frontend dev",
+    "start:simulator": "npm --prefix iot-simulator start",
+    "start:mcp": "npm --prefix mcp dev",
+    "seed": "node backend/initDb.js && node backend/seed-geography.js && node backend/seed-nodes.js",
+    "test:e2e": "node backend/test-e2e-master.js",
+    "test:ml": "npm --prefix ml run test || python -m pytest ml/tests"
+  }
+}

@@ -38,6 +38,12 @@ app.use('/api/symptom', symptomRoute);
 const weatherRoute = require('./routes/weather');
 app.use('/api/weather', weatherRoute);
 
+const villagesRoute = require('./routes/villages');
+app.use('/api/villages', villagesRoute);
+
+const waterSourcesRoute = require('./routes/waterSources');
+app.use('/api/water-sources', waterSourcesRoute);
+
 const riskRoute = require('./routes/risk');
 app.use('/api/risk', riskRoute);
 

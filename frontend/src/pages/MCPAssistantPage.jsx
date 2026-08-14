@@ -45,7 +45,7 @@ export function MCPAssistantPage() {
     setIsThinking(true);
 
     try {
-      const response = await executeMcpQuery(q, selectedNode?.nodeId || 'NODE001');
+      const response = await executeMcpQuery(q, selectedNode);
       const assistantMsg = {
         id: 'ast_' + Date.now(),
         sender: 'assistant',
@@ -115,9 +115,9 @@ export function MCPAssistantPage() {
           </span>
 
           <select
-            value={selectedNode?.nodeId}
+            value={selectedNode?.sourceId}
             onChange={(e) => {
-              const node = nodesList.find(n => n.nodeId === e.target.value);
+              const node = nodesList.find(n => n.sourceId === e.target.value);
               if (node) setSelectedNode(node);
             }}
             style={{
@@ -133,8 +133,8 @@ export function MCPAssistantPage() {
             }}
           >
             {nodesList.map(n => (
-              <option key={n.nodeId} value={n.nodeId}>
-                📍 {n.name} ({n.nodeId})
+              <option key={n.sourceId} value={n.sourceId}>
+                📍 {n.name} ({n.sourceId})
               </option>
             ))}
           </select>

@@ -3,12 +3,30 @@ import { useApp } from '../../context/AppContext';
 import { Users, HeartPulse, ShieldCheck, ArrowUpRight } from 'lucide-react';
 
 export function SymptomCard() {
-  const { selectedNode, setActiveTab } = useApp();
-  const symptoms = selectedNode?.defaultSymptoms || {
-    feverCount: 0,
-    diarrheaCount: 0,
-    vomitingCount: 0,
-    abdominalPainCount: 0
+  const { selectedNode, activeRiskData, setActiveTab } = useApp();
+
+  const factors = activeRiskData?.contributingFactors;
+
+  const symptoms = {
+    feverCount:
+      factors?.feverCount ??
+      selectedNode?.defaultSymptoms?.feverCount ??
+      0,
+
+    diarrheaCount:
+      factors?.diarrheaCount ??
+      selectedNode?.defaultSymptoms?.diarrheaCount ??
+      0,
+
+    vomitingCount:
+      factors?.vomitingCount ??
+      selectedNode?.defaultSymptoms?.vomitingCount ??
+      0,
+
+    abdominalPainCount:
+      factors?.abdominalPainCount ??
+      selectedNode?.defaultSymptoms?.abdominalPainCount ??
+      0,
   };
 
   const totalSymptoms = symptoms.feverCount + symptoms.diarrheaCount + symptoms.vomitingCount + symptoms.abdominalPainCount;
@@ -26,7 +44,7 @@ export function SymptomCard() {
               Community Health Signals
             </h3>
             <div style={{ fontSize: '11px', color: '#94A3B8' }}>
-              Aggregated Spatial Reports • Region: <strong style={{ color: '#E2E8F0' }}>{selectedNode?.region}</strong>
+              Aggregated Spatial Reports • District: <strong style={{ color: '#E2E8F0' }}>{selectedNode?.district || 'All'}</strong>
             </div>
           </div>
         </div>

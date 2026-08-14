@@ -108,6 +108,8 @@ async function runTests() {
   } catch (err) {
     console.error("Test execution failed:", err);
   } finally {
+    await db.collection('waterReadings').deleteMany({ nodeId: "TEST_NODE_1" });
+    await db.collection('sensorNodes').deleteMany({ nodeId: "TEST_NODE_1" });
     server.close();
     await closeDatabase();
   }

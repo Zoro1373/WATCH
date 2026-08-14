@@ -84,7 +84,11 @@ export function AlertsFeed() {
                 </div>
 
                 <button
-                  onClick={() => selectNodeById(alert.nodeId)}
+                  onClick={() => {
+                    if (alert.waterSourceId && alert.waterSourceId !== 'UNKNOWN') {
+                      selectNodeById(alert.waterSourceId);
+                    }
+                  }}
                   style={{
                     background: 'transparent',
                     border: 'none',
