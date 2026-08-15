@@ -285,7 +285,7 @@ export function MCPAssistantPage() {
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={`Ask about ${selectedNode?.name || 'this location'}... (e.g. "Why is this location high risk?")`}
+            placeholder={`Ask about ${selectedWaterSource?.name || 'this location'}... (e.g. "Why is this location high risk?")`}
             style={{
               flex: 1,
               background: 'rgba(7, 11, 20, 0.8)',
