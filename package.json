@@ -3,6 +3,7 @@
   "version": "1.1.0",
   "description": "AquaSentry (WaterGuard AI) - Assam Water Contamination & Epidemic Early-Warning System",
   "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
     "start:backend": "npm --prefix backend start",
     "start:frontend": "npm --prefix frontend dev",
     "start:simulator": "npm --prefix iot-simulator start",
