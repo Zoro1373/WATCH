@@ -28,6 +28,9 @@ export function AppProvider({ children }) {
   const [isLoadingRisk, setIsLoadingRisk] = useState(false);
   const [isRiskUnavailable, setIsRiskUnavailable] = useState(false);
 
+  // Track pending community symptom submissions per water source until ML inference updates
+  const [pendingCommunitySymptoms, setPendingCommunitySymptoms] = useState({});
+
   // System alerts
   const [alerts, setAlerts] = useState([
     {
@@ -123,7 +126,36 @@ export function AppProvider({ children }) {
               setIsRiskUnavailable(true);
             }
           } else {
-            setActiveRiskData(riskRes.data);
+            // Check if there is a pending community symptom submission for this source
+            const pending = pendingCommunitySymptoms[selectedWaterSource.sourceId];
+            if (pending && riskRes.data) {
+              const mlTimestamp = new Date(riskRes.data.timestamp).getTime();
+              const subTimestamp = new Date(pending.timestamp).getTime();
+
+              if (mlTimestamp >= subTimestamp) {
+                // Backend ML inference has run after the submission: adopt full ML result and clear pending
+                setActiveRiskData(riskRes.data);
+                setPendingCommunitySymptoms(prev => {
+                  const next = { ...prev };
+                  delete next[selectedWaterSource.sourceId];
+                  return next;
+                });
+              } else {
+                // Backend ML inference hasn't run yet: keep ML riskScore/riskLevel, merge submitted symptom counts
+                setActiveRiskData({
+                  ...riskRes.data,
+                  contributingFactors: {
+                    ...riskRes.data.contributingFactors,
+                    feverCount: (riskRes.data.contributingFactors?.feverCount || 0) + pending.feverCount,
+                    diarrheaCount: (riskRes.data.contributingFactors?.diarrheaCount || 0) + pending.diarrheaCount,
+                    vomitingCount: (riskRes.data.contributingFactors?.vomitingCount || 0) + pending.vomitingCount,
+                    abdominalPainCount: (riskRes.data.contributingFactors?.abdominalPainCount || 0) + pending.abdominalPainCount,
+                  }
+                });
+              }
+            } else {
+              setActiveRiskData(riskRes.data);
+            }
             setIsRiskUnavailable(false);
           }
           if (weatherRes?.data) {
@@ -154,7 +186,7 @@ export function AppProvider({ children }) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [selectedWaterSource]);
+  }, [selectedWaterSource, pendingCommunitySymptoms]);
 
   // Selection handlers
   const selectWaterSourceById = (sourceId) => {
@@ -182,14 +214,38 @@ export function AppProvider({ children }) {
   const addCommunityReport = (report) => {
     console.log('Community report registered:', report);
 
-    // Optimistically update the symptom counts in the dashboard right away
+    // 1. Authoritatively resolve the village and primary water source
+    const village = villagesList.find(v => v.villageId === report.villageId);
+    const targetSourceId = village?.primaryWaterSourceId || selectedWaterSource?.sourceId;
+    const targetSource = waterSourcesList.find(s => s.sourceId === targetSourceId);
+
+    if (targetSource) {
+      setSelectedWaterSource(targetSource);
+      setSelectedVillage(village || null);
+    }
+
+    // 2. Track pending community symptoms for this water source until ML inference updates
+    setPendingCommunitySymptoms(prev => {
+      const existing = prev[targetSourceId] || { feverCount: 0, diarrheaCount: 0, vomitingCount: 0, abdominalPainCount: 0 };
+      return {
+        ...prev,
+        [targetSourceId]: {
+          feverCount: existing.feverCount + report.feverCount,
+          diarrheaCount: existing.diarrheaCount + report.diarrheaCount,
+          vomitingCount: existing.vomitingCount + report.vomitingCount,
+          abdominalPainCount: existing.abdominalPainCount + report.abdominalPainCount,
+          timestamp: new Date().toISOString()
+        }
+      };
+    });
+
+    // 3. Optimistically update symptom counts for the target water source
     setActiveRiskData(prev => {
-      if (!prev) {
-        // No live risk data yet — create a minimal record so the dashboard shows something
+      if (!prev || prev.waterSourceId !== targetSourceId) {
         return {
-          waterSourceId: selectedWaterSource?.sourceId,
-          riskScore: selectedWaterSource?.defaultScore || 0,
-          riskLevel: selectedWaterSource?.defaultRisk || 'LOW',
+          waterSourceId: targetSourceId,
+          riskScore: targetSource?.defaultScore ?? 0.2,
+          riskLevel: targetSource?.defaultRisk || 'LOW',
           timestamp: new Date().toISOString(),
           contributingFactors: {
             feverCount: report.feverCount,
@@ -199,7 +255,6 @@ export function AppProvider({ children }) {
           }
         };
       }
-      // Merge symptom counts into existing contributing factors
       return {
         ...prev,
         contributingFactors: {
@@ -212,18 +267,20 @@ export function AppProvider({ children }) {
       };
     });
 
-    // Also add a live alert for this submission
-    const village = villagesList.find(v => v.villageId === report.villageId);
-    const source = waterSourcesList.find(s => s.sourceId === village?.primaryWaterSourceId);
+    // 4. Register community intake event in the alert feed (inherits verified ML level, no frontend calculation)
     const total = report.feverCount + report.diarrheaCount + report.vomitingCount + report.abdominalPainCount;
     if (total > 0) {
+      const existingRiskLevel = (activeRiskData && activeRiskData.waterSourceId === targetSourceId)
+        ? activeRiskData.riskLevel
+        : (targetSource?.defaultRisk || 'LOW');
+
       const newAlert = {
         id: 'alt_live_' + Date.now(),
-        waterSourceId: source?.sourceId || 'UNKNOWN',
+        waterSourceId: targetSourceId || 'UNKNOWN',
         locationName: village?.name || report.villageId,
-        level: total >= 10 ? 'HIGH' : total >= 5 ? 'MEDIUM' : 'LOW',
+        level: existingRiskLevel,
         title: 'Community Report Submitted',
-        message: `New symptom report from ${village?.name || report.villageId}: ${total} total cases reported (Fever: ${report.feverCount}, Diarrhea: ${report.diarrheaCount}, Vomiting: ${report.vomitingCount}, Abdominal Pain: ${report.abdominalPainCount}).`,
+        message: `New symptom report from ${village?.name || report.villageId}: ${total} total cases reported (Fever: ${report.feverCount}, Diarrhea: ${report.diarrheaCount}, Vomiting: ${report.vomitingCount}, Abdominal Pain: ${report.abdominalPainCount}). Attributed to ${targetSource?.name || targetSourceId}.`,
         timestamp: report.timestamp || new Date().toISOString(),
         factors: [
           report.feverCount > 0 ? `Fever (${report.feverCount})` : null,
