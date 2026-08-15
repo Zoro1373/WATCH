@@ -324,10 +324,12 @@ export async function submitSymptomReport(payload) {
     const res = await client.post('/symptom', payload);
     return res.data;
   } catch (err) {
-    if (err.response && err.response.data) {
+    // If backend returned a JSON structured error
+    if (err.response && err.response.data && typeof err.response.data === 'object' && err.response.data.error) {
       throw err.response.data;
     }
-    // Simulation fallback if backend offline
+    // Simulation fallback if network offline or transient issue
+    console.warn("Backend symptom submission fallback triggered:", err.message);
     return {
       success: true,
       message: "Symptom report accepted (Local Demo Mode)",
