@@ -26,7 +26,9 @@ export function MCPAssistantPage() {
     'Show recent water readings.',
     'What symptoms were reported?',
     'What weather conditions were recorded?',
-    'Show recent risk history.'
+    'List all monitored villages.',
+    'Show all water sources.',
+    'Tell me about Chakardeo.'
   ];
 
   const handleSend = async (queryToSend) => {

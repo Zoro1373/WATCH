@@ -18,7 +18,7 @@ import { SystemHealthCheck } from './health/system.health.js';
     level: 'info'
   },
   transport: {
-    type: 'http',
+    type: 'dual',
     http: {
       port: 3001,
       host: 'localhost'
