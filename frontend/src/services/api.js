@@ -9,7 +9,7 @@ const client = axios.create({
     'Content-Type': 'application/json',
     'X-API-KEY': API_KEY,
   },
-  timeout: 5000,
+  timeout: 12000,
 });
 
 /**
@@ -228,30 +228,38 @@ export async function fetchVillageById(villageId) {
  * Fetch latest risk assessment for a monitored water source.
  */
 export async function fetchWaterSourceRisk(sourceId) {
+  const fallback = ASSAM_WATER_SOURCES.find(s => s.sourceId === sourceId);
+  const fallbackData = fallback ? {
+    waterSourceId: fallback.sourceId,
+    riskScore: fallback.defaultScore,
+    riskLevel: fallback.defaultRisk,
+    timestamp: new Date().toISOString(),
+    location: { latitude: fallback.latitude, longitude: fallback.longitude },
+    contributingFactors: fallback.defaultSymptoms ? {
+      feverCount: fallback.defaultSymptoms.feverCount,
+      diarrheaCount: fallback.defaultSymptoms.diarrheaCount,
+      turbidity: fallback.defaultWater?.turbidity,
+      ph: fallback.defaultWater?.ph,
+      precipitation: fallback.defaultWeather?.precipitation
+    } : null
+  } : null;
+
   try {
     const res = await client.get(`/risk/source/${sourceId}`);
     if (res.data && res.data.success && res.data.data) {
       return { data: res.data.data, isLive: true };
     }
   } catch (err) {
-    // 404 means no risk evaluated yet
+    // 404 means no risk in DB yet — return fallback data (never show unavailable)
     if (err.response && err.response.status === 404) {
-      return { data: null, isLive: true, unavailable: true };
+      console.warn(`No risk data in DB for '${sourceId}', using dataset defaults.`);
+      return { data: fallbackData, isLive: false };
     }
     console.warn(`Error fetching risk for water source '${sourceId}':`, err.message);
   }
 
-  const fallback = ASSAM_WATER_SOURCES.find(s => s.sourceId === sourceId);
-  return {
-    data: fallback ? {
-      waterSourceId: fallback.sourceId,
-      riskScore: fallback.defaultScore,
-      riskLevel: fallback.defaultRisk,
-      timestamp: new Date().toISOString(),
-      location: { latitude: fallback.latitude, longitude: fallback.longitude }
-    } : null,
-    isLive: false
-  };
+  // Network/timeout error — always show fallback, never blank
+  return { data: fallbackData, isLive: false };
 }
 
 /**

@@ -120,12 +120,7 @@ export function AppProvider({ children }) {
         ]);
 
         if (isMounted) {
-          if (riskRes.unavailable || !riskRes.data) {
-            if (isInitial) {
-              setActiveRiskData(null);
-              setIsRiskUnavailable(true);
-            }
-          } else {
+          if (riskRes.data) {
             // Check if there is a pending community symptom submission for this source
             const pending = pendingCommunitySymptoms[selectedWaterSource.sourceId];
             if (pending && riskRes.data) {
@@ -133,7 +128,6 @@ export function AppProvider({ children }) {
               const subTimestamp = new Date(pending.timestamp).getTime();
 
               if (mlTimestamp >= subTimestamp) {
-                // Backend ML inference has run after the submission: adopt full ML result and clear pending
                 setActiveRiskData(riskRes.data);
                 setPendingCommunitySymptoms(prev => {
                   const next = { ...prev };
@@ -141,7 +135,6 @@ export function AppProvider({ children }) {
                   return next;
                 });
               } else {
-                // Backend ML inference hasn't run yet: keep ML riskScore/riskLevel, merge submitted symptom counts
                 setActiveRiskData({
                   ...riskRes.data,
                   contributingFactors: {
@@ -158,15 +151,14 @@ export function AppProvider({ children }) {
             }
             setIsRiskUnavailable(false);
           }
+          // Never set isRiskUnavailable=true — always show data or fallback
           if (weatherRes?.data) {
             setActiveWeatherData(weatherRes.data);
           }
         }
       } catch (err) {
         console.warn('Error loading water source risk:', err);
-        if (isMounted && isInitial) {
-          setIsRiskUnavailable(true);
-        }
+        // Do NOT set unavailable — let existing data or defaults show
       } finally {
         if (isMounted && isInitial) {
           setIsLoadingRisk(false);
