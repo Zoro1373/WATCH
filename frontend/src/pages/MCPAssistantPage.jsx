@@ -110,36 +110,16 @@ export function MCPAssistantPage() {
           </p>
         </div>
 
-        {/* Read-Only Status & Node Selector */}
+        {/* Read-Only Status Badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
           <span className="glass-pill" style={{ color: '#38BDF8', borderColor: 'rgba(56, 189, 248, 0.3)', fontSize: '12px' }}>
             <Shield size={13} /> Strictly Read-Only
           </span>
-
-          <select
-            value={selectedNode?.sourceId}
-            onChange={(e) => {
-              const node = nodesList.find(n => n.sourceId === e.target.value);
-              if (node) setSelectedNode(node);
-            }}
-            style={{
-              background: '#0F172A',
-              color: '#F8FAFC',
-              border: '1px solid rgba(0, 229, 255, 0.3)',
-              borderRadius: 'var(--radius-full)',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              outline: 'none'
-            }}
-          >
-            {nodesList.map(n => (
-              <option key={n.sourceId} value={n.sourceId}>
-                📍 {n.name} ({n.sourceId})
-              </option>
-            ))}
-          </select>
+          {selectedWaterSource && (
+            <span className="glass-pill" style={{ color: '#00E5FF', borderColor: 'rgba(0,229,255,0.3)', fontSize: '12px' }}>
+              📍 {selectedWaterSource.name}
+            </span>
+          )}
         </div>
       </div>
 
