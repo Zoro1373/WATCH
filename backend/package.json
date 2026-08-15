@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "seed": "node initDb.js && node seed-geography.js && node seed-nodes.js",
     "test-startup": "node -e \"const app = require('./server'); setTimeout(async () => { if (app.server) { app.server.close(); } await require('./db').closeDatabase(); console.log('Test completed'); process.exit(0); }, 3000);\""
   },
   "dependencies": {

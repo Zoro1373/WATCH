@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || '/api';
+const API_BASE_URL = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'https://watch-e8hw.onrender.com/api';
 const API_KEY = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_KEY) || 'front_key_default';
 
 const client = axios.create({
@@ -268,7 +268,7 @@ export async function fetchLocationRisk(lat, lon) {
     // Graceful fallback
   }
 
-  const match = ASSAM_WATER_SOURCES.find(n => 
+  const match = ASSAM_WATER_SOURCES.find(n =>
     Math.abs(n.latitude - lat) < 0.2 && Math.abs(n.longitude - lon) < 0.2
   ) || ASSAM_WATER_SOURCES[0];
 
@@ -298,7 +298,7 @@ export async function fetchLocationWeather(lat, lon) {
     // Fallback
   }
 
-  const match = ASSAM_WATER_SOURCES.find(n => 
+  const match = ASSAM_WATER_SOURCES.find(n =>
     Math.abs(n.latitude - lat) < 0.2 && Math.abs(n.longitude - lon) < 0.2
   ) || ASSAM_WATER_SOURCES[0];
 
