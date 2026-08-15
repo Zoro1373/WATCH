@@ -5,7 +5,7 @@ import { Bot, Send, Sparkles, Shield, Terminal, ArrowRight, CornerDownLeft, Refr
 import { RiskBadge } from '../components/common/Badge';
 
 export function MCPAssistantPage() {
-  const { selectedNode, setSelectedNode, nodesList } = useApp();
+  const { selectedWaterSource } = useApp();
   const [messages, setMessages] = useState([
     {
       id: 'msg_001',
@@ -47,7 +47,7 @@ export function MCPAssistantPage() {
     setIsThinking(true);
 
     try {
-      const response = await executeMcpQuery(q, selectedNode);
+      const response = await executeMcpQuery(q, selectedWaterSource);
       const assistantMsg = {
         id: 'ast_' + Date.now(),
         sender: 'assistant',
